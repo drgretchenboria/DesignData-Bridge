@@ -47,7 +47,7 @@ This application is a Minimum Viable Product (MVP) designed to bridge the gap be
 1.  Clone the repository:
 
     ```bash
-    git clone [repository URL]
+    git clone https://github.com/drgretchenboria/DesignData-Bridge
     ```
 
 2.  Follow the deployment instructions provided in the `DEPLOYMENT.md` file (or similar) to set up the application within your AWS environment.
