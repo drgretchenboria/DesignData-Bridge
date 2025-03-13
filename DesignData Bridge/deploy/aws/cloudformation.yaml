@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'DesignData Bridge ECS Fargate Service'
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC where the service will be deployed
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Subnets where the service will be deployed
+
+  ContainerImage:
+    Type: String
+    Description: Container image URI
+
+Resources:
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: data-lineage-bridge
+      CapacityProviders:
+        - FARGATE
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Weight: 1
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: data-lineage-bridge
+      RequiresCompatibilities:
+        - FARGATE
+      NetworkMode: awsvpc
+      Cpu: 256
+      Memory: 512
+      ContainerDefinitions:
+        - Name: data-lineage-bridge
+          Image: !Ref ContainerImage
+          PortMappings:
+            - ContainerPort: 80
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: data-lineage-bridge
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref ServiceSecurityGroup
+
+  ServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for data-lineage-bridge service
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/data-lineage-bridge
+      RetentionInDays: 30
+
+Outputs:
+  ClusterName:
+    Description: ECS Cluster Name
+    Value: !Ref Cluster
+
+  ServiceName:
+    Description: ECS Service Name
+    Value: !Ref Service
+
+  LogGroupName:
+    Description: CloudWatch Log Group Name
+    Value: !Ref LogGroup
